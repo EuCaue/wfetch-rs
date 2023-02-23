@@ -2,7 +2,7 @@ use chrono::{Local, TimeZone};
 use serde::{Deserialize, Serialize};
 use std::io::{self, Write};
 use std::path::PathBuf;
-use std::{env, fs};
+use std::{env, fs, process};
 
 #[derive(Debug, Deserialize, Serialize)]
 struct Data {
@@ -55,10 +55,42 @@ struct Answers {
 #[tokio::main]
 
 async fn main() -> Result<(), reqwest::Error> {
+    handle_args();
     let answers: Answers = get_info();
     let data = fetch_api(&answers).await.unwrap();
     format_data(data, answers.unit_temp);
     Ok(())
+}
+
+fn handle_args() -> () {
+    let args: Vec<String> = env::args().collect();
+    match args.get(1) {
+        Some(first_arg) => match first_arg.as_str() {
+            "--clear" | "clear" => clear_config(),
+            _ => {
+                println!("No arguments passed");
+                process::exit(1);
+            }
+        },
+        None => (),
+    }
+}
+
+fn clear_config() -> () {
+    let home_dir = env::var_os("HOME")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| panic!("Could not determine home directory"));
+    let file_path = home_dir.join(".config/wfetchrs.json");
+    match fs::remove_file(file_path) {
+        Ok(()) => {
+            println!("\x1b[32mConfig file deleted");
+            process::exit(0);
+        }
+        Err(e) => {
+            println!("\x1b[31mError: {}", e);
+            process::exit(1);
+        }
+    }
 }
 
 fn get_info() -> Answers {
@@ -162,7 +194,7 @@ fn prompt_questions() -> Answers {
 async fn fetch_api(answers: &Answers) -> Result<WeatherData, Box<dyn std::error::Error>> {
     let url = format!("https://api.openweathermap.org/data/2.5/weather?q={},{}&APPID=67f5955e010175c6efb6012468d32e1e", answers.city, answers.country);
     let data = reqwest::get(&url).await?.json::<Data>().await?;
-    let weather_data = WeatherData {
+    Ok(WeatherData {
         temp: data.main.temp,
         temp_min: data.main.temp_min,
         temp_max: data.main.temp_max,
@@ -177,6 +209,5 @@ async fn fetch_api(answers: &Answers) -> Result<WeatherData, Box<dyn std::error:
             .timestamp(data.sys.sunset, 0)
             .format("%H:%M:%S")
             .to_string(),
-    };
-    Ok(weather_data)
+    })
 }
