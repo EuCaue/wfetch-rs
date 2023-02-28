@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::io::{self, Write};
 use std::path::PathBuf;
 use std::{env, fs, process};
+use toml;
 
 #[derive(Debug, Deserialize, Serialize)]
 struct Data {
@@ -52,6 +53,11 @@ struct Answers {
     unit_temp: String,
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+struct ConfigFile {
+    openweather_api_key: String,
+}
+
 #[tokio::main]
 
 async fn main() -> Result<(), reqwest::Error> {
@@ -66,9 +72,20 @@ fn handle_args() -> () {
     let args: Vec<String> = env::args().collect();
     match args.get(1) {
         Some(first_arg) => match first_arg.as_str() {
-            "--clear" | "clear" => clear_config(),
+            "--clear" | "-cl" => clear_config(),
+            "--help" | "-h" => {
+                println!(
+                    "fetch-rs help\n\n\
+          Usage: wfetch --command\n\n\
+          \x1b[32m--help\x1b[0m\n\
+          display this message.\n\n\
+          \x1b[32m--clear\x1b[0m\n\
+          delete the config file."
+                );
+                process::exit(0);
+            }
             _ => {
-                println!("No arguments passed");
+                println!("\x1b[31mUnknown Option: {}", first_arg);
                 process::exit(1);
             }
         },
@@ -112,6 +129,81 @@ fn get_info() -> Answers {
     return answers;
 }
 
+fn prompt_questions() -> Answers {
+    let mut city = String::new();
+    let mut country = String::new();
+    let mut unit_temp = String::new();
+    let unit_temps: Vec<&str> = vec![" Celsius ", " Fahrenheit ", " Kelvin "];
+
+    loop {
+        city.clear();
+        country.clear();
+        unit_temp.clear();
+
+        print!("City: ");
+        io::stdout().flush().unwrap();
+        io::stdin().read_line(&mut city).unwrap();
+
+        print!("Country: ");
+        io::stdout().flush().unwrap();
+        io::stdin().read_line(&mut country).unwrap();
+
+        for (index, unit) in unit_temps.iter().enumerate() {
+            print!("{} >", index + 1);
+            println!("{:}", unit);
+        }
+        print!("Unit Temp: ");
+        io::stdout().flush().unwrap();
+        io::stdin().read_line(&mut unit_temp).unwrap();
+
+        print!("Correct Data? (y/n): ");
+        io::stdout().flush().unwrap();
+        let mut retry = String::new();
+        io::stdin().read_line(&mut retry).unwrap();
+
+        match retry.trim().to_lowercase().as_str() {
+            "sim" | "s" | "yes" | "y" | "verdadeiro" | "v" => {
+                print!("\x1B[2J\x1B[1;1H");
+                break;
+            }
+            "não" | "n" | "no" | "false" | "falso" | "f" => continue,
+            _ => panic!("a"),
+        };
+    }
+    let answers = Answers {
+        city: city.trim().to_string(),
+        country: country.trim().to_string(),
+        unit_temp: unit_temp.trim().to_string(),
+    };
+    return answers;
+}
+
+async fn fetch_api(answers: &Answers) -> Result<WeatherData, Box<dyn std::error::Error>> {
+    const CONFIG_TOML: &'static str = include_str!("../config.toml");
+    let config: ConfigFile = toml::from_str(CONFIG_TOML).unwrap();
+    let url = format!(
+        "https://api.openweathermap.org/data/2.5/weather?q={},{}&APPID={}",
+        answers.city, answers.country, config.openweather_api_key
+    );
+    let data = reqwest::get(&url).await?.json::<Data>().await?;
+    Ok(WeatherData {
+        temp: data.main.temp,
+        temp_min: data.main.temp_min,
+        temp_max: data.main.temp_max,
+        temp_feels_like: data.main.feels_like,
+        city_name: data.name,
+        country_name: data.sys.country,
+        sunrise: Local
+            .timestamp(data.sys.sunrise, 0)
+            .format("%H:%M:%S")
+            .to_string(),
+        sunset: Local
+            .timestamp(data.sys.sunset, 0)
+            .format("%H:%M:%S")
+            .to_string(),
+    })
+}
+
 fn format_data(data: WeatherData, unit_temp: String) -> () {
     println!("Country: {}", data.country_name);
     println!("City: {}", data.city_name);
@@ -144,70 +236,4 @@ fn format_data(data: WeatherData, unit_temp: String) -> () {
 
     println!("Sunrise: {}", data.sunrise);
     println!("Sunset: {}", data.sunset);
-}
-
-fn prompt_questions() -> Answers {
-    let mut city = String::new();
-    let mut country = String::new();
-    let mut unit_temp = String::new();
-    let unit_temps: Vec<&str> = vec![" Celsius ", " Fahrenheit ", " Kelvin "];
-
-    loop {
-        print!("City: ");
-        io::stdout().flush().unwrap();
-        io::stdin().read_line(&mut city).unwrap();
-
-        print!("Country: ");
-        io::stdout().flush().unwrap();
-        io::stdin().read_line(&mut country).unwrap();
-
-        for (index, unit) in unit_temps.iter().enumerate() {
-            print!("{} >", index + 1);
-            println!("{:}", unit);
-        }
-        print!("Unit Temp:");
-        io::stdout().flush().unwrap();
-        io::stdin().read_line(&mut unit_temp).unwrap();
-
-        print!("Correct Data? (y/n): ");
-        io::stdout().flush().unwrap();
-        let mut retry = String::new();
-        io::stdin().read_line(&mut retry).unwrap();
-
-        match retry.trim().to_lowercase().as_str() {
-            "sim" | "s" | "yes" | "y" | "verdadeiro" | "v" => {
-                print!("\x1B[2J\x1B[1;1H");
-                break;
-            }
-            "não" | "n" | "no" | "false" | "falso" | "f" => false,
-            _ => panic!("a"),
-        };
-    }
-    let answers = Answers {
-        city: city.trim().to_string(),
-        country: country.trim().to_string(),
-        unit_temp: unit_temp.trim().to_string(),
-    };
-    return answers;
-}
-
-async fn fetch_api(answers: &Answers) -> Result<WeatherData, Box<dyn std::error::Error>> {
-    let url = format!("https://api.openweathermap.org/data/2.5/weather?q={},{}&APPID=67f5955e010175c6efb6012468d32e1e", answers.city, answers.country);
-    let data = reqwest::get(&url).await?.json::<Data>().await?;
-    Ok(WeatherData {
-        temp: data.main.temp,
-        temp_min: data.main.temp_min,
-        temp_max: data.main.temp_max,
-        temp_feels_like: data.main.feels_like,
-        city_name: data.name,
-        country_name: data.sys.country,
-        sunrise: Local
-            .timestamp(data.sys.sunrise, 0)
-            .format("%H:%M:%S")
-            .to_string(),
-        sunset: Local
-            .timestamp(data.sys.sunset, 0)
-            .format("%H:%M:%S")
-            .to_string(),
-    })
 }
