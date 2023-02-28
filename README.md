@@ -6,7 +6,7 @@
 
 ### Binary
 
-Go to [release page](link) download the wfetch .tar.gz
+Go to [release page](https://github.com/EuCaue/wfetch-rs/releases) download the wfetch .tar.gz
 
 Extract the .tar.gz and move the wfetch to your path (eg: /usr/bin/)
 
