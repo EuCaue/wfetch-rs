@@ -29,9 +29,16 @@ struct Location {
     url: String,
 }
 
-fn update_field_in_json(field: &str, new_value: &str) -> Result<(), Box<dyn std::error::Error>> {
+fn get_config_path() -> std::path::PathBuf {
+    let config_path = ".config";
+    let config_file = "wfetch.json";
     let home_dir = home_dir().unwrap();
-    let path = home_dir.join(".config").join("wfetch.json");
+    let path = home_dir.join(config_path).join(config_file);
+    return path;
+}
+
+fn update_field_in_json(field: &str, new_value: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let path = get_config_path();
     let mut config_file = OpenOptions::new().read(true).write(true).open(path)?;
     let mut config_content = String::new();
     config_file.read_to_string(&mut config_content)?;
@@ -56,8 +63,7 @@ fn update_field_in_json(field: &str, new_value: &str) -> Result<(), Box<dyn std:
 }
 
 pub fn verify_has_api_key() -> std::io::Result<String> {
-    let home_dir = home_dir().unwrap();
-    let path = home_dir.join(".config").join("wfetch.json");
+    let path = get_config_path();
     let mut config_file = File::open(path)?;
     let mut contents = String::new();
     config_file.read_to_string(&mut contents)?;
@@ -77,9 +83,7 @@ fn get_setup_location(api_key: String) -> Result<Location, Box<dyn std::error::E
         api_key,
         location.as_string().unwrap()
     );
-    println!("URL: {:#?}", formated_url);
     let response_locations = reqwest::blocking::get(formated_url)?.json::<Vec<Location>>()?;
-
     let locations_formatedd: Vec<String> = response_locations
         .iter()
         .map(|location| {
@@ -90,8 +94,8 @@ fn get_setup_location(api_key: String) -> Result<Location, Box<dyn std::error::E
         })
         .collect();
 
-    let question_select = Question::select("theme")
-        .message("What do you want to do?")
+    let question_select = Question::select("City")
+        .message("Choose your location?")
         .choices::<Vec<String>, _>(locations_formatedd)
         .build();
 
@@ -140,8 +144,7 @@ pub fn parse_args() -> std::io::Result<Args> {
         match update_field_in_json("api_key", api_key) {
             Ok(_) => {}
             Err(_) => {
-                let home_dir = home_dir().unwrap();
-                let path = home_dir.join(".config").join("wfetch.json");
+                let path = get_config_path();
                 let mut config_file = File::create(path.clone())?;
                 let my_data = json!(
                 {
