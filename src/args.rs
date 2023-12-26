@@ -14,8 +14,8 @@ pub struct Args {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ConfigFile {
-    API_KEY: String,
-    QUERY_LOCATION: Option<String>,
+    pub API_KEY: String,
+    pub QUERY_LOCATION: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -37,7 +37,7 @@ fn get_config_path() -> std::path::PathBuf {
     return path;
 }
 
-fn read_config_file() -> std::io::Result<(ConfigFile, File)> {
+pub fn read_config_file() -> std::io::Result<(ConfigFile, File)> {
     let path = get_config_path();
     let mut config_file = OpenOptions::new().read(true).write(true).open(path)?;
     let mut config_content = String::new();
@@ -48,8 +48,8 @@ fn read_config_file() -> std::io::Result<(ConfigFile, File)> {
 
 fn update_field_in_json(field: &str, new_value: &str) -> Result<(), Box<dyn std::error::Error>> {
     let (mut config, mut config_file) = read_config_file()?;
-    // println!("{:#?}", config);
-    // println!("{:#?}", config_file);
+    println!("{:#?}", config);
+    println!("{:#?}", config_file);
 
     match field.to_lowercase().as_str() {
         "api_key" => config.API_KEY = new_value.to_string(),
@@ -141,9 +141,10 @@ pub fn parse_args() -> std::io::Result<Args> {
         .get_matches();
 
     //  TODO: some way to verify the api key
+    //  TODO: make this exit the application 
     if let Some(api_key) = matches.get_one::<String>("api_key") {
         match update_field_in_json("api_key", api_key) {
-            Ok(_) => {}
+            Ok(_) => std::process::exit(1),
             Err(_) => {
                 let path = get_config_path();
                 let mut config_file = File::create(path.clone())?;
@@ -154,6 +155,7 @@ pub fn parse_args() -> std::io::Result<Args> {
                 );
                 let json_string = serde_json::to_string(&my_data)?;
                 config_file.write_all(json_string.as_bytes())?;
+                std::process::exit(1);
             }
         }
     }
@@ -162,7 +164,7 @@ pub fn parse_args() -> std::io::Result<Args> {
         if *setup {
             let _ = handle_setup().map_err(|_err| {
                 // TODO: do a better error matching here
-                println!("Error: {}", _err);
+                println!("Error from Some Setup: {}", _err);
                 eprintln!("Error: config file not found\n Please get your api key here https://www.weatherapi.com/ \n and run `wfetch --api-key <api_key>` from here?");
                 std::process::exit(1);
             });
