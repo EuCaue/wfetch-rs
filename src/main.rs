@@ -128,7 +128,6 @@ fn get_location_data(
         api_key, location
     );
     let response_location = reqwest::blocking::get(formated_url)?.json::<ResponseLocation>()?;
-    println!("{:#?}", response_location);
     Ok(response_location)
 }
 
