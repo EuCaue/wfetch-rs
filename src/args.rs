@@ -14,18 +14,15 @@ pub struct Args {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ConfigFile {
-    pub API_KEY: String,
-    pub QUERY_LOCATION: Option<String>,
+    pub api_key: String,
+    pub query_location: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
 struct Location {
-    id: u64,
     name: String,
     region: String,
     country: String,
-    lat: f64,
-    lon: f64,
     url: String,
 }
 
@@ -50,8 +47,8 @@ fn update_field_in_json(field: &str, new_value: &str) -> Result<(), Box<dyn std:
     let (mut config, mut config_file) = read_config_file()?;
 
     match field.to_lowercase().as_str() {
-        "api_key" => config.API_KEY = new_value.to_string(),
-        "query_location" => config.QUERY_LOCATION = Some(new_value.to_string()),
+        "api_key" => config.api_key = new_value.to_string(),
+        "query_location" => config.query_location = Some(new_value.to_string()),
         _ => {
             eprintln!("Unknown field: {}", field);
             return Ok(());
@@ -67,7 +64,7 @@ fn update_field_in_json(field: &str, new_value: &str) -> Result<(), Box<dyn std:
 
 pub fn verify_has_api_key() -> std::io::Result<String> {
     let (config, _) = read_config_file()?;
-    Ok(config.API_KEY)
+    Ok(config.api_key)
 }
 
 fn get_setup_location(api_key: String) -> Result<Location, Box<dyn std::error::Error>> {
@@ -125,20 +122,20 @@ pub fn parse_args() -> std::io::Result<Args> {
         .arg(arg!([name] "Optional name to operate on"))
         .arg(
             arg!(
-             -k --api_key <API_KEY> "Sets the api key for the api"
+             -k --api_key <API_KEY> "Setup the api key for the api"
             )
             .required(false),
         )
         .arg(
             arg!(
-                -s --setup "Setup the application"
+                -s --setup "Setup the location for the api"
             )
             .required(false),
         )
         .get_matches();
 
     //  TODO: some way to verify the api key
-    //  TODO: make this exit the application 
+    //  TODO: make this exit the application
     if let Some(api_key) = matches.get_one::<String>("api_key") {
         match update_field_in_json("api_key", api_key) {
             Ok(_) => std::process::exit(1),
@@ -147,7 +144,7 @@ pub fn parse_args() -> std::io::Result<Args> {
                 let mut config_file = File::create(path.clone())?;
                 let my_data = json!(
                 {
-                  "API_KEY": api_key,
+                  "api_key": api_key,
                 }
                 );
                 let json_string = serde_json::to_string(&my_data)?;
