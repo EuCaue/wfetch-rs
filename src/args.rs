@@ -48,8 +48,6 @@ pub fn read_config_file() -> std::io::Result<(ConfigFile, File)> {
 
 fn update_field_in_json(field: &str, new_value: &str) -> Result<(), Box<dyn std::error::Error>> {
     let (mut config, mut config_file) = read_config_file()?;
-    println!("{:#?}", config);
-    println!("{:#?}", config_file);
 
     match field.to_lowercase().as_str() {
         "api_key" => config.API_KEY = new_value.to_string(),
@@ -103,7 +101,6 @@ fn get_setup_location(api_key: String) -> Result<Location, Box<dyn std::error::E
     let answer_location = requestty::prompt_one(question_select).unwrap();
     let index = answer_location.as_list_item().unwrap().index;
     let chosen_location = response_locations.clone().get(index).unwrap().clone();
-    println!("Response: {:#?}", answer_location);
     Ok(chosen_location)
 }
 
