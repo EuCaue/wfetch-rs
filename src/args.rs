@@ -160,8 +160,9 @@ pub fn parse_args() -> std::io::Result<Args> {
                 // TODO: do a better error matching here
                 println!("Error from Some Setup: {}", _err);
                 eprintln!("Error: config file not found\n Please get your api key here https://www.weatherapi.com/ \n and run `wfetch --api-key <api_key>` from here?");
-                std::process::exit(1);
             });
+            println!("Setup finished, run wfecth again to use it, exiting...");
+            std::process::exit(1);
         }
     }
 
