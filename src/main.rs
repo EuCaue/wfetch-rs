@@ -88,7 +88,7 @@ fn convert_to_12h_format(time_24h: String) -> String {
 
 fn get_formated_data(response_location: ResponseLocation) -> FormatedData {
     let location_name = format!(
-        "{city},{state},{country}",
+        "{city}, {state}, {country}",
         city = response_location.location.name,
         state = response_location.location.region,
         country = response_location.location.country
@@ -166,7 +166,13 @@ fn main() {
             }
     } ).unwrap();
     let (config, _) = args::read_config_file().unwrap();
-    let location_data = get_location_data(api_key, config.QUERY_LOCATION.unwrap()).unwrap();
+    let location_data = get_location_data(
+        api_key,
+        config
+            .query_location
+            .expect("No location provided, run wfetch --setup, and provide a location"),
+    )
+    .unwrap();
     let data = get_formated_data(location_data);
     display_formated_data(data)
 }
