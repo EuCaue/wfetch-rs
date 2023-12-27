@@ -122,13 +122,13 @@ pub fn parse_args() -> std::io::Result<Args> {
         .arg(arg!([name] "Optional name to operate on"))
         .arg(
             arg!(
-             -k --api_key <API_KEY> "Setup the api key for the api"
+             -k --"api-key" <API_KEY> "Setup the api key"
             )
             .required(false),
         )
         .arg(
             arg!(
-                -s --setup "Setup the location for the api"
+                -s --setup "Setup the location"
             )
             .required(false),
         )
@@ -136,7 +136,7 @@ pub fn parse_args() -> std::io::Result<Args> {
 
     //  TODO: some way to verify the api key
     //  TODO: make this exit the application
-    if let Some(api_key) = matches.get_one::<String>("api_key") {
+    if let Some(api_key) = matches.get_one::<String>("api-key") {
         match update_field_in_json("api_key", api_key) {
             Ok(_) => std::process::exit(1),
             Err(_) => {
