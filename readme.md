@@ -32,7 +32,7 @@ wfetch is a minimalistic command-line tool written in Rust for give your informa
    cargo build --release
    ```
 
-4. Run wfetch --api-key, to setup the api key:
+4. Run wfetch --api-key, to setup the [api key](https://www.weatherapi.com/):
 
    ```bash
    ./target/release/wfetch --api-key=<API_KEY>
